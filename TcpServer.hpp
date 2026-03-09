@@ -17,8 +17,8 @@ class TcpServer {
 	void bindSocket();
 	void startListening();
 	int acceptClient();
-	void consumeServerSocket(fd_set &rdSet, ClientTable &table);
-	void consumeClientSockets(fd_set &rdSet, ClientTable &table);
+	// void consumeServerSocket(fd_set &rdSet, ClientTable &table);
+	// void consumeClientSockets(fd_set &rdSet, ClientTable &table);
 
    public:
 	TcpServer(int port);

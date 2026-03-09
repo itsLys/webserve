@@ -53,75 +53,7 @@ void TcpServer::startListening() {
 	}
 }
 
-void TcpServer::init() {
-	createSocket();
-	configureSocket();
-	configureAddress();
-	bindSocket();
-	startListening();
-
-	std::cout << "Listening on port: " << _port << std::endl;
-}
-
-void build_rdset(ClientTable &table, fd_set &rdSet, int &maxFd) {
-	ClientMap map = table.getAll();
-	for (ClientMap::iterator it = map.begin(); it != map.end(); ++it) {
-		FD_SET(it->first, &rdSet);
-		if (it->first > maxFd) maxFd = it->first;
-	}
-}
-
-void TcpServer::consumeServerSocket(fd_set &rdSet, ClientTable &table) {
-	int clientFd;
-	if (FD_ISSET(_server_fd, &rdSet)) {
-		clientFd = acceptClient();
-		if (clientFd >= 0) table.add(clientFd);
-	}
-}
-
-void TcpServer::consumeClientSockets(fd_set &rdSet, ClientTable &table) {
-	char buff[4064] = {0};
-	ClientMap map = table.getAll();
-	int n = 0;
-
-	for (ClientMap::iterator it = map.begin(); it != map.end();) {
-		if (FD_ISSET(it->first, &rdSet)) {
-			n = read(it->first, buff, sizeof(buff));
-			if (n == 0) {
-				std::cout << it->first << " Disconnected" << "\n";
-				table.remove(it->first);
-				continue;
-			} else {
-				std::cout << it->first << " " << buff << "\n";
-				bzero(buff, sizeof(buff));
-			}
-		}
-		++it;
-	}
-}
-
-void TcpServer::run() {
-	fd_set rdSet;
-	fd_set wrSet;
-	ClientTable table;
-	int maxFd;
-
-	while (true) {
-		// build read_set = listening + clients
-		FD_ZERO(&wrSet);
-		FD_ZERO(&rdSet);
-		FD_SET(_server_fd, &rdSet);
-
-		maxFd = _server_fd;
-		build_rdset(table, rdSet, maxFd);
-		select(maxFd + 1, &rdSet, &wrSet, NULL, NULL);
-		consumeServerSocket(rdSet, table);
-		consumeClientSockets(rdSet, table);
-	}
-}
-
 /* return new client fd or -1*/
-// TODO: move near private methods
 int TcpServer::acceptClient() {
 	struct sockaddr_in client_addr;
 	socklen_t len = sizeof(client_addr);
@@ -139,4 +71,63 @@ int TcpServer::acceptClient() {
 	std::cout << ' ' << client_fd << std::endl;
 
 	return client_fd;
+}
+
+void TcpServer::init() {
+	createSocket();
+	configureSocket();
+	configureAddress();
+	bindSocket();
+	startListening();
+
+	std::cout << "Listening on port: " << _port << std::endl;
+}
+
+// void build_fd_sets(int server_fd, fd_set &masterset, fd_set &rdset) {
+// 	// rdset = masterset;
+// 	// FD_SET(server_fd, &rdset);
+// }
+
+void TcpServer::run() {
+	fd_set rdset;
+	fd_set masterset;
+	ClientTable table;
+	int max_fd = _server_fd;
+	int client_fd;
+	char buff[4064] = {0};
+
+	FD_ZERO(&masterset);
+	FD_ZERO(&rdset);
+
+	while (true) {
+		FD_ZERO(&rdset);
+		for (ClientMap::iterator it = table.getAll().begin();
+			 it != table.getAll().end(); ++it) {
+			FD_SET(it->first, &rdset);
+		}
+		FD_SET(_server_fd, &rdset);
+		select(max_fd + 1, &rdset, NULL, NULL, NULL);
+		if (FD_ISSET(_server_fd, &rdset)) {
+			client_fd = acceptClient();
+			if (client_fd >= 0) table.add(client_fd);
+			if (client_fd > max_fd) max_fd = client_fd;
+		}
+		for (ClientMap::iterator it = table.getAll().begin();
+			 it != table.getAll().end();) {
+			bzero(buff, sizeof(buff));
+			if (FD_ISSET(it->first, &rdset)) {
+				int n = read(it->first, buff, sizeof(buff));
+				if (n <= 0) {
+					// FD_CLR(it->first, &masterset);
+					std::cout << it->first << ": " << "Disconnected\n";
+					ClientMap::iterator rem = it;
+					it++;
+					table.remove(rem->first);
+					continue;
+				} else
+					std::cout << it->first << ": " << buff;
+			}
+			it++;
+		}
+	}
 }

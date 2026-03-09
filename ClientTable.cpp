@@ -11,6 +11,7 @@ void ClientTable::remove(int fd) {
 
 	if (it != clients.end()) {
 		delete it->second;
+		clients.erase(it);
 	}
 }
 
