@@ -23,7 +23,7 @@ bool Client::onReadable() {
 }
 
 bool Client::onWritable() {
-	int n = write(fd, "Hello", 5);
+	int n = write(fd, "Hello\n", 6);
 
 	if (n <= 0) return false;
 

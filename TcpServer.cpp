@@ -83,10 +83,6 @@ void TcpServer::init() {
 	std::cout << "Listening on port: " << _port << std::endl;
 }
 
-// void build_fd_sets(int server_fd, fd_set &masterset, fd_set &rdset) {
-// 	// rdset = masterset;
-// 	// FD_SET(server_fd, &rdset);
-// }
 void build_fd_sets(int server_fd, fd_set &rdset, fd_set &wrset,
 				   ClientMap &map) {
 	FD_ZERO(&rdset);
@@ -137,18 +133,14 @@ void TcpServer::run() {
 			if (FD_ISSET(it->first, &rdset)) {
 				if (it->second->onReadable() == false) {
 					std::cout << it->first << ": Disconnected\n";
-					ClientMap::iterator rem = it;
-					++it;
-					table.remove(rem->first);
+					it = table.remove(it->first);
 					continue;
 				}
 			}
 			if (FD_ISSET(it->first, &wrset)) {
 				if (it->second->onWritable() == false) {
 					std::cout << it->first << ": Disconnected\n";
-					ClientMap::iterator rem = it;
-					++it;
-					table.remove(rem->first);
+					it = table.remove(it->first);
 					continue;
 				}
 			}
