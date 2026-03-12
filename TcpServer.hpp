@@ -1,7 +1,6 @@
 #ifndef TCPSERVER_HPP
 #define TCPSERVER_HPP
 
-#include <netinet/in.h>
 #include "ClientTable.hpp"
 #include "EventLoop.hpp"
 #include "Socket.hpp"
