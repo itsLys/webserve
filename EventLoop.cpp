@@ -11,17 +11,6 @@ void make_non_blocking(int fd);
 EventLoop::EventLoop(Socket &socket, ClientTable &table)
 	: _socket(socket), _table(table) {}
 
-void EventLoop::buildFdSets() {
-	ClientMap &map = _table.getAll();
-	FD_ZERO(&_rdset);
-	FD_ZERO(&_wrset);
-	for (ClientMap::iterator it = map.begin(); it != map.end(); ++it) {
-		FD_SET(it->first, &_rdset);
-		if (it->second->hasDataToWrite()) FD_SET(it->first, &_wrset);
-	}
-	FD_SET(_socket.getFd(), &_rdset);
-}
-
 void EventLoop::handleNewConnections(Socket &socket) {
 	struct epoll_event ev;
 	int clientFd;
@@ -37,27 +26,21 @@ void EventLoop::handleNewConnections(Socket &socket) {
 	}
 }
 
-bool EventLoop::handleClientActivity(int client_fd) {
-	if (FD_ISSET(client_fd, &_rdset))
-		if (!_table.get(client_fd)->onReadable()) {
-			std::cout << client_fd << ": Disconnected\n";
-			return false;
-		}
-	if (FD_ISSET(client_fd, &_wrset))
-		if (!_table.get(client_fd)->onWritable()) {
-			std::cout << client_fd << ": Disconnected\n";
-			return false;
-		}
-	return true;
-}
-
-void EventLoop::processClients(int clientFd) {
-	ClientMap &map = _table.getAll();
-	for (ClientMap::iterator it = map.begin(); it != map.end();) {
-		if (handleClientActivity(it->first) == false)
-			it = _table.remove(it->first);
-		else
-			++it;
+void EventLoop::processClients(struct epoll_event &ev) {
+	if (ev.events | EPOLLIN && !_table.get(ev.data.fd)->onReadable()) {
+		std::cout << ev.data.fd << ": Disconnected\n";
+		epoll_ctl(_epollfd, EPOLL_CTL_DEL, ev.data.fd, NULL);
+		_table.remove(ev.data.fd);
+		// close connection;
+	}
+	if (ev.events | EPOLLOUT && !_table.get(ev.data.fd)->onWritable()) {
+		std::cout << ev.data.fd << ": Disconnected\n";
+		epoll_ctl(_epollfd, EPOLL_CTL_DEL, ev.data.fd, NULL);
+		_table.remove(ev.data.fd);
+	}
+	if (_table.get(ev.data.fd)->hasDataToWrite()) {
+		ev.events = ev.events | EPOLLOUT;
+		epoll_ctl(_epollfd, EPOLL_CTL_MOD, ev.data.fd, &ev);
 	}
 }
 

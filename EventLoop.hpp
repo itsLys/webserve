@@ -13,10 +13,10 @@ class EventLoop {
 	// fd_set _wrset;
 	// int _max_fd; // TODO: remove implementaiton
 
-	void buildFdSets();
+	// void buildFdSets();
 	void handleNewConnections(Socket &socket);
-	bool handleClientActivity(int clientFd);
-	void processClients(int clientFd);
+	// bool handleClientActivity(int clientFd);
+	void processClients(struct epoll_event &ev);
 
    public:
 	EventLoop(Socket &socket, ClientTable &table);
