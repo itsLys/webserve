@@ -7,6 +7,7 @@
 void make_non_blocking(int fd) {
 	int flags = fcntl(fd, F_GETFL, 0);
 	if (flags == -1) {
+		std::cerr <<  std::strerror(errno) << std::endl;
 		std::cerr << "fcntl() failed\n";
 		return;
 	} 

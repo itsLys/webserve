@@ -22,6 +22,7 @@ push: fclean
 		git push
 
 run: re
+	make clean
 	./webserve
 
 runv: re

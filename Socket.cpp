@@ -43,8 +43,9 @@ void Socket::bindSocket() {
 	}
 }
 
+#define QUEUE_SIZE 10
 void Socket::startListening() {
-	if (listen(_server_fd, 10) < 0) {
+	if (listen(_server_fd, QUEUE_SIZE) < 0) {
 		std::cout << "listen(): " << std::strerror(errno) << std::endl;
 		exit(EXIT_FAILURE);
 	}
